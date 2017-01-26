@@ -1,51 +1,72 @@
 <?php
-	if(!$_POST || !$_POST['username'] || !$_POST['password'] || !$_POST['email'])
+    // check if all user information has been posted
+	if(!$_POST || 
+       !$_POST['username'] || 
+       !$_POST['password'] || 
+       !$_POST['email'])
 		exit();
-		
-   $db = new SQLite3('../../../db/users.sql') or die ("cannot open");
-   $user = strtolower($_POST['username']);
-   $email = strtolower($_POST['email']);;
-   
-   if(strlen($_POST['password'])<6 || preg_match('/^[A-Za-z0-9_]*$/', $_POST['password'])!=1 || preg_match('/[A-Z]+/', $_POST['password'])!=1 || preg_match('/[a-z]+/', $_POST['password'])!=1 || preg_match('/[0-9]+/', $_POST['password'])!=1){
-	   	echo "<script type='text/javascript'>
-			   	alert('Your password can only contain letters, numbers, and an underscore, must be at least 6 characters, and contain at least one lowercase letter, one uppercase letter, and one number!');
-			   	window.location.href = './signup.php?username=$user&email=$email&';
+
+    // open database
+    $db = new SQLite3('../../../db/users.sql') or die ("cannot open");
+    
+    // make username and email all lowercase (case insensitive)
+    $user = strtolower($_POST['username']);
+    $email = strtolower($_POST['email']);
+    
+    // check if password matches reqirements
+    if(strlen($_POST['password'])<6 || 
+       preg_match('/^[A-Za-z0-9_]*$/', $_POST['password'])!=1 || 
+       preg_match('/[A-Z]+/', $_POST['password'])!=1 || 
+       preg_match('/[a-z]+/', $_POST['password'])!=1 || 
+       preg_match('/[0-9]+/', $_POST['password'])!=1){
+        echo "<script type='text/javascript'>
+            \t	alert('Your password can only contain letters, numbers, and an underscore, must be at least 6 characters, and contain at least one lowercase letter, one uppercase letter, and one number!');
+            window.location.href = './signup.php?username=$user&email=$email&';
 		   	</script>";
-	   	exit();
-   }
-   if(strlen($user)<6 || strlen($user)>32 || preg_match('/^[a-z0-9_]*$/', $user)!=1){
-	   	echo "<script type='text/javascript'>
+        exit();
+    }
+
+    // check if username matches reqirements
+    if(strlen($user)<6 || 
+       strlen($user)>32 || 
+       preg_match('/^[a-z0-9_]*$/', $user)!=1){
+        echo "<script type='text/javascript'>
 			   	alert('Your username can only contain letters, numbers, and an underscore and must be between 6 and 32 characters!');
 			   	window.location.href = './signup.php?username=$user&email=$email&';
 		   	</script>";
 	   	exit();
-   }
-   if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
-	   	echo "<script type='text/javascript'>
+    }
+
+    // check if email is valid
+    if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
+        echo "<script type='text/javascript'>
 			   	alert('The given email address is not vaild!');
 			   	window.location.href = './signup.php?username=$user&email=$email&';
 		   	</script>";
-	   	exit();
-   }
-   
-   $result = $db->query("SELECT * FROM users WHERE username = '$user'");
-   if($result->fetchArray()){
-	   	echo "<script type='text/javascript'>
+        exit();
+    }
+    
+    // check if user already exists
+    $result = $db->query("SELECT * FROM users WHERE username = '$user'");
+    if($result->fetchArray()){
+        echo "<script type='text/javascript'>
 	   			alert('That username is already in use!');
 	   			window.location.href = './signup.php?username=$user&email=$email&';
 	   		  </script>";
 	   	exit();
-   }
-   else{
-   	$result = $db->query("SELECT * FROM users WHERE email = '$email'");
-   	if($res = $result->fetchArray()){
-   		echo "<script type='text/javascript'>
-	   			alert('That email is already in use!');
-	   			window.location.href = './signup.php?username=$user&email=$email&';
-	   		  </script>";
-   		exit();
+    }
+    else{
+        // check if email is already in use
+   	    $result = $db->query("SELECT * FROM users WHERE email = '$email'");
+   	    if($res = $result->fetchArray()){
+   		   echo "<script type='text/javascript'> 
+                    alert('That email is already in use!');
+                    window.location.href = './signup.php?username=$user&email=$email&';
+                </script>";
+   		   exit();
    	}
    	else{
+        // create the user account
    		$characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 		$key = uniqid($user, true);
    		$hash = password_hash($_POST['password'], PASSWORD_DEFAULT);
