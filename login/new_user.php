@@ -10,19 +10,20 @@
 		exit();
 
     // open database
-    $db = new SQLite3('../../../db/users.sql') or die ("cannot open");
+    //$db = new SQLite3('../../../db/users.sql') or die ("cannot open");
     
+    // open database with PDO
+    $db = new PDO('sqlite:../../../db/users.sql') or die ("cannot open");
+
     // make username and email all lowercase (case insensitive)
     $user = strtolower($_POST['username']);
     $email = strtolower($_POST['email']);
 
-    // sanitize variables
-    $user = sqlite_escape_string($user);
-    $email = sqlite_escape_string($email);
-    $firstname = sqlite_escape_string($firstname);
-    $lastname = sqlite_escape_string($lastname);
-    $organization = sqlite_escape_string($organization);
-    
+    // get post variables for prepared statements
+    $firstname = $_POST['first-name'];
+    $lastname = $_POST['last-name'];
+    $organization = $_POST['organization'];
+
     // check if password matches reqirements
     if(strlen($_POST['password'])<6 || 
        preg_match('/^[A-Za-z0-9_]*$/', $_POST['password'])!=1 || 
@@ -57,8 +58,25 @@
     }
     
     // check if user already exists
-    $result = $db->query("SELECT * FROM users WHERE username = '$user'");
-    if($result->fetchArray()){
+    //$result = $db->exec("SELECT * FROM users WHERE username = '$user'");
+    $userStatement = $db->prepare("SELECT * FROM users WHERE username = :username");
+
+    if(!$userStatement){
+        print_r($db->errorInfo());
+        die();
+    }
+
+    $success = $userStatement->execute(array(":username" => $user));
+
+    if(!$success){
+            print_r($userStatement);
+            echo("<br>");
+            print_r($db->errorInfo());
+            echo("<br>");
+            die("<br><br>Failed to create account.");
+    }
+
+    if($userStatement->fetchAll()){
         echo "<script type='text/javascript'>
 	   			alert('That username is already in use!');
 	   			window.location.href = './signup.php?username=$user&email=$email&';
@@ -67,8 +85,19 @@
     }
     else{
         // check if email is already in use
-   	    $result = $db->query("SELECT * FROM users WHERE email = '$email'");
-   	    if($res = $result->fetchArray()){
+   	    //$result = $db->exec("SELECT * FROM users WHERE email = '$email'");
+        $emailStatement = $db->prepare("SELECT * FROM users WHERE email = :email");
+        $emailStatement->execute(array(":email" => $email));
+
+        if(!$success){
+            print_r($userStatement);
+            echo("<br>");
+            print_r($db->errorInfo());
+            echo("<br>");
+            die("<br><br>Failed to create account.");
+        }
+        
+   	    if($res = $emailStatement->fetchAll()){
    		   echo "<script type='text/javascript'> 
                     alert('That email is already in use!');
                     window.location.href = './signup.php?username=$user&email=$email&';
@@ -85,7 +114,29 @@
    		$hash = password_hash($_POST['password'], PASSWORD_DEFAULT);
         
         // create user record in users
-   		$db->query("INSERT INTO users VALUES ('$user','$email','$hash','$key',0, '$firstname', '$lastname', '$organization');");
+        $insStatement = $db->prepare("INSERT INTO users VALUES (?, ?, ?, ?, 0, ?, ?, ?)");
+        
+        // prepare parameters set
+        $params = array($user, 
+                        $email,
+                        $hash,
+                        $key,
+                        $firstname,
+                        $lastname,
+                        $organization);
+        
+        $success = $insStatement->execute($params);
+        if(!$success){
+            print_r($insStatement);
+            echo("<br>");
+            print_r($params);
+            echo("<br>");
+            print_r($db->errorInfo());
+            echo("<br>");
+            die("<br><br>Failed to create account.");
+        }
+            
+   		//$db->exec("INSERT INTO users VALUES ('$user','$email','$hash','$key',0, '$firstname', '$lastname', '$organization');");
         
         // get appliction URL 
         // TODO: this could probably be stored in a config table -ntr
