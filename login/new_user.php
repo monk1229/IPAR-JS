@@ -9,9 +9,6 @@
        !$_POST['organization'])
 		exit();
 
-    // open database
-    //$db = new SQLite3('../../../db/users.sql') or die ("cannot open");
-    
     // open database with PDO
     $db = new PDO('sqlite:../../../db/users.sql') or die ("cannot open");
 
@@ -58,22 +55,13 @@
     }
     
     // check if user already exists
-    //$result = $db->exec("SELECT * FROM users WHERE username = '$user'");
     $userStatement = $db->prepare("SELECT * FROM users WHERE username = :username");
-
-    if(!$userStatement){
-        print_r($db->errorInfo());
-        die();
-    }
 
     $success = $userStatement->execute(array(":username" => $user));
 
     if(!$success){
-            print_r($userStatement);
-            echo("<br>");
-            print_r($db->errorInfo());
-            echo("<br>");
-            die("<br><br>Failed to create account.");
+            // TODO: put some error logging here
+            die("<br><br>Failed to create account. Please contact the site administrator.");
     }
 
     if($userStatement->fetchAll()){
@@ -85,16 +73,12 @@
     }
     else{
         // check if email is already in use
-   	    //$result = $db->exec("SELECT * FROM users WHERE email = '$email'");
         $emailStatement = $db->prepare("SELECT * FROM users WHERE email = :email");
         $emailStatement->execute(array(":email" => $email));
 
         if(!$success){
-            print_r($userStatement);
-            echo("<br>");
-            print_r($db->errorInfo());
-            echo("<br>");
-            die("<br><br>Failed to create account.");
+            // TODO: put some error logging here -ntr
+            die("<br><br>Failed to create account. Please contact the site administrator.");
         }
         
    	    if($res = $emailStatement->fetchAll()){
@@ -114,29 +98,24 @@
    		$hash = password_hash($_POST['password'], PASSWORD_DEFAULT);
         
         // create user record in users
-        $insStatement = $db->prepare("INSERT INTO users VALUES (?, ?, ?, ?, 0, ?, ?, ?)");
+        $insStatement = $db->prepare("INSERT INTO users VALUES (:username, :email, :password, :curKey, 0, :firstname, :lastname, :organization)");
         
         // prepare parameters set
-        $params = array($user, 
-                        $email,
-                        $hash,
-                        $key,
-                        $firstname,
-                        $lastname,
-                        $organization);
+        $params = array(":username" => $user, 
+                        ":email" => $email,
+                        ":password" => $hash,
+                        ":curKey" => $key,
+                        ":firstname" => $firstname,
+                        ":lastname" => $lastname,
+                        ":organization" => $organization);
         
         $success = $insStatement->execute($params);
         if(!$success){
-            print_r($insStatement);
-            echo("<br>");
-            print_r($params);
-            echo("<br>");
-            print_r($db->errorInfo());
-            echo("<br>");
-            die("<br><br>Failed to create account.");
-        }
+            // print_r($db->errorInfo());
             
-   		//$db->exec("INSERT INTO users VALUES ('$user','$email','$hash','$key',0, '$firstname', '$lastname', '$organization');");
+            // TODO: put some error logging here -ntr
+            die("<br><br>Failed to create account. Please contact the site administrator.");
+        }
         
         // get appliction URL 
         // TODO: this could probably be stored in a config table -ntr
